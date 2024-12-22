@@ -1,5 +1,12 @@
 const ul_clock_list = document.getElementById("clock-list")
 const clock_list = {}
+const button_backup = document.getElementById("button-backup")
+const backup_painel = document.getElementById("backup-painel")
+const backup_input = document.getElementById("backup-input")
+const backup_buttom_export = document.getElementById("button-export")
+const backup_buttom_import = document.getElementById("button-import")
+let import_clicked = false
+let button_backup_enable = false
 
 function sync_clocks() {
   localStorage.setItem("clocks", JSON.stringify(clocks))
@@ -232,3 +239,39 @@ async function registerSW() {
     }
   }
 }
+
+button_backup.addEventListener("click", () => {
+  if(button_backup_enable) {
+    backup_painel.style.display = "none"
+    button_backup_enable = false
+  } else {
+    backup_painel.style.display = "block"
+    button_backup_enable = true
+  }
+})
+
+backup_buttom_import.addEventListener("click", () => {
+  navigator.clipboard.readText().then((clipboard_text) => {
+    if(import_clicked) {
+      localStorage.setItem("clocks", clipboard_text)
+      location.reload()
+    }
+    backup_input.value = clipboard_text
+    import_clicked = true
+  })
+})
+
+backup_input.addEventListener("focus", () => {
+  import_clicked = false
+})
+
+backup_buttom_export.addEventListener("click", () => {
+  import_clicked = false
+  // Get the text field
+  var copyText = localStorage.getItem("clocks")
+
+  backup_input.value = copyText
+
+   // Copy the text inside the text field
+  navigator.clipboard.writeText(copyText);
+})

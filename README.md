@@ -1,2 +1,2 @@
 # tempometer
-Salvar quantiade de tempo em cada atividade
+Salvar quantidade de tempo em cada atividade

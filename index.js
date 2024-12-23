@@ -1,5 +1,4 @@
 const ul_clock_list = document.getElementById("clock-list")
-const clock_list = {}
 const button_backup = document.getElementById("button-backup")
 const backup_painel = document.getElementById("backup-painel")
 const backup_input = document.getElementById("backup-input")
@@ -61,22 +60,10 @@ function nowDate() {
 }
 
 
-function addClock({name, time=0, start_time=undefined, logs=""}) {
-  const sync_this_clock = () => {
-    clocks[name] = {
-      "name": name,
-      "time": time,
-      "start_time": start_time,
-      "logs": logs,
-      "lastStart": new Date()
-    }
-    sync_clocks()
-  }
-
+function addClock({name, time=0, start_time=null, logs=""}) {
+  // -------------------------------------------------------------
   const li = document.createElement("li")
   li.className = "shadow"
-
-  let old_time = time
 
   const div_center_clock_title = document.createElement("div")
   const div_clock_title = document.createElement("div")
@@ -103,7 +90,6 @@ function addClock({name, time=0, start_time=undefined, logs=""}) {
   const button_play = document.createElement("button")
   const button_logs = document.createElement("button")
   const button_trash = document.createElement("button")
-  button_play.innerText = "▶"
   button_play.className = "clock-buttons"
   button_logs.innerText = "logs"
   button_logs.className = "clock-buttons"
@@ -119,24 +105,6 @@ function addClock({name, time=0, start_time=undefined, logs=""}) {
   li.append(div_log)
   ul_clock_list.appendChild(li)
 
-  const save_time_log = () => {
-    const symbol = time - old_time >= 0 ? "+" : "-"
-    logs = `\n[${nowDate()}] ${t_format(old_time)} -> ${t_format(time)} [${symbol}${t_format(Math.abs(time - old_time))}]` + logs
-    old_time = time
-    div_log.innerText = logs
-  }
-
-  if(start_time != undefined) {
-    console.log(logs)
-    time += Math.floor((new Date() - new Date(start_time))/1000)
-    start_time = undefined
-    save_time_log()
-    sync_this_clock()
-    setTimeout(() => {
-      input_clock_time.value = t_format(time)
-    }, 200)
-  } 
-
   button_logs.addEventListener("click", () => {
     if (div_log.style.display == "none") {
       div_log.style.display = "block"
@@ -144,51 +112,97 @@ function addClock({name, time=0, start_time=undefined, logs=""}) {
       div_log.style.display = "none"
     }
   })
+  // -------------------------------------------------------------
+
+  // CLOCK LOGIC
+
+  const is_running_clock = () => start_time != null
+  
+  button_play.innerText = is_running_clock() ? "◼" : "▶"
+
+  const sync_this_clock = () => {
+    clocks[name] = {
+      "name": name,
+      "time": time,
+      "start_time": start_time,
+      "logs": logs,
+      "last_start": last_start
+    }
+    sync_clocks()
+  }
+
+  const set_time = (new_time) => {
+    let old_time = time
+    time = new_time
+
+    const symbol = time - old_time >= 0 ? "+" : "-"
+    logs = `\n[${nowDate()}] ${t_format(old_time)} -> ${t_format(time)} [${symbol}${t_format(Math.abs(time - old_time))}]` + logs
+    old_time = time
+    div_log.innerText = logs
+  }
+
+  const start_clock = () => {
+    if(is_running_clock()) {
+      return
+    }
+    button_play.innerText = "◼"
+    start_time = new Date()
+    last_start = start_time
+    sync_this_clock()
+  }
+
+  const stop_clock = () => {
+    if(!is_running_clock()) {
+      return
+    }
+    button_play.innerText = "▶"
+    set_time(time + Math.floor((new Date() - new Date(start_time))/1000))
+    start_time = null
+    input_clock_time.value = t_format(time)
+    sync_this_clock()
+  }
 
   button_play.addEventListener("click", () => {
-    const running = button_play.innerText == "◼"
-    if (running) {
-      button_play.innerText = "▶"
-      start_time = undefined
-      sync_this_clock()
-      save_time_log()
+    if (is_running_clock()) {
+      stop_clock()
     } else {
-      button_play.innerText = "◼"
-      start_time = new Date()
+      start_clock()
     }
-    sync_this_clock()
-  })
-
-  button_trash.addEventListener("click", () => {
-    delete clocks[name]
-    sync_clocks()
-    li.remove()
   })
 
   input_clock_time.addEventListener("focus", () => {
-    button_play.innerText = "▶"
+    stop_clock()
   })
   
   input_clock_time.addEventListener("blur", () => {
     if(input_clock_time.value != t_format(time)) {
-      _time = t_parse(input_clock_time.value)
-      if(_time != undefined) {
-        time = _time
+      const new_time = t_parse(input_clock_time.value)
+      if(new_time != undefined) {
+        set_time(new_time)
       }
       input_clock_time.value = t_format(time)
-      start_time = undefined
       sync_this_clock()
-      save_time_log()
+    }
+  })
+
+  button_trash.addEventListener("click", () => {
+    const res = confirm(`Remove clock: ${name}?`)
+    if(res) {
+      delete clocks[name]
+      sync_clocks()
+      li.remove()
     }
   })
 
   setInterval(() => {
-    if (button_play.innerText == "▶") {
-      return
+    if(is_running_clock()) {
+      input_clock_time.value = t_format(time + Math.floor((new Date() - new Date(start_time))/1000))
     }
-    time += 1
-    input_clock_time.value = t_format(time)
-  }, 1000)
+  }, 500)
+
+  // setTimeout(() => {
+  //   // stop_clock()
+  // }, 200);
 }
 let clocks = null
 
@@ -201,7 +215,7 @@ if(localStorage.getItem("clocks") == null) {
 
 function main() {
   const sortedClocks = Object.entries(clocks)
-  .sort(([, a], [, b]) => new Date(b.lastStart) - new Date(a.lastStart)); // Ordena do mais recente ao mais antigo
+  .sort(([, a], [, b]) => new Date(b.last_start) - new Date(a.last_start)); // Ordena do mais recente ao mais antigo
 
   for (const [key, clock] of sortedClocks) {
     addClock(clock); // Substitua pela sua lógica
@@ -216,9 +230,9 @@ function main() {
       clocks[clock_name] = {
         name: clock_name,
         time: 0,
-        start_time: undefined,
+        start_time: null,
         logs: "",
-        lastStart: new Date()
+        last_start: new Date()
       }
       sync_clocks()
       addClock(clocks[clock_name])
@@ -254,8 +268,17 @@ button_backup.addEventListener("click", () => {
 backup_buttom_import.addEventListener("click", () => {
   navigator.clipboard.readText().then((clipboard_text) => {
     if(import_clicked) {
-      localStorage.setItem("clocks", clipboard_text)
-      location.reload()
+      try {
+        JSON.parse(clipboard_text)
+        const res = confirm("Comfirm import")
+        if(res) {
+          localStorage.setItem("clocks", clipboard_text)
+          location.reload()
+        }
+      } catch(err){
+        backup_input.value = "Error on import!"
+        return
+      }
     }
     backup_input.value = clipboard_text
     import_clicked = true

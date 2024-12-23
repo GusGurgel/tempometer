@@ -127,10 +127,11 @@ function addClock({name, time=0, start_time=undefined, logs=""}) {
   }
 
   if(start_time != undefined) {
+    console.log(logs)
     time += Math.floor((new Date() - new Date(start_time))/1000)
     start_time = undefined
-    sync_this_clock()
     save_time_log()
+    sync_this_clock()
     setTimeout(() => {
       input_clock_time.value = t_format(time)
     }, 200)

@@ -60,7 +60,7 @@ function nowDate() {
 }
 
 
-function addClock({name, time=0, start_time=null, logs=""}) {
+function addClock({name, time=0, start_time=null, logs="", last_start=null}) {
   // -------------------------------------------------------------
   const li = document.createElement("li")
   li.className = "shadow"
